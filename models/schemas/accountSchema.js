@@ -57,7 +57,7 @@ account.methods.checkPassword = function (toCheck, cb) {
 }
 
 account.path("type").validate(function(role) {
-    if (type !== "user" && role !== "corporate")
+    if (role !== "user" && role !== "corporate")
         return false;
     return true;
 }, "Invalid role");

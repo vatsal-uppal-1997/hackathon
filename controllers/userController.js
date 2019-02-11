@@ -1,3 +1,4 @@
+const joi = require("joi");
 const userModel = require("../models/schemas/userSchema").userModel;
 const accountModel = require("../models/schemas/accountSchema").accountModel;
 
@@ -24,23 +25,21 @@ function sanitizeInput(data) {
             return true;
     return false;
 }
-function sanitizeProfileCreation(data) {
-    if (data.hasOwnProperty("email") && 
-        data.hasOwnProperty("name") &&
-        data.hasOwnProperty("phone") &&
-        data.hasOwnProperty("address") &&
-        data.hasOwnProperty("confirmPassword") &&
-        data.hasOwnProperty("password"))
-        if (data.confirmPassword === data.password)
-            return false;
-        else 
-            return true;
-    return false;
-}
 
 async function createProfile(profile) {
     try {
-        if (sanitizeProfileCreation(profile)) {
+        const schema = joi.object().keys({
+            email : joi.string().email({minDomainAtoms: 2}).required(),
+            name : joi.string().min(3).max(15).required(),
+            phone: joi.string().regex(/^[0-9]{10}$/).required(),
+            address: joi.string().min(3).required(),
+            confirmPassword: joi.string().alphanum().min(3).max(30).required(),
+            age: joi.number().max(200).required(),
+            password: joi.string().alphanum().min(3).max(30).required()
+        });
+        const result = joi.validate(profile, schema);
+
+        if (result.error === null) {
             const user = new userModel({
                 email: profile.email,
                 name: profile.name,
@@ -54,10 +53,12 @@ async function createProfile(profile) {
                 password: profile.password,
                 type: "user"
             });
-            await user.save();
-            await account.save();
+            const saveUser = user.save();
+            const saveAccount = account.save();
+            await Promise.all([saveUser, saveAccount]);
+            return user.id;
         } else {
-            throw new Error("Wrong profile creation format !");
+            throw new Error(result.error);
         }
     } catch (err) {
         throw err;
